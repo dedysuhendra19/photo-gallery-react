@@ -1,4 +1,5 @@
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Camera, CameraResultType, CameraSource, Photo } from '@capacitor/camera';
+import { Directory, Filesystem } from '@capacitor/filesystem';
 import { useState } from 'react';
 
 export function usePhotoGallery() {
@@ -8,25 +9,49 @@ export function usePhotoGallery() {
     
     const addNewToGallery = async () => {
         // Take a photo
-        const capturedPhoto = await Camera.getPhoto({
+        const capturedPhoto: Photo = await Camera.getPhoto({
             resultType: CameraResultType.Uri,
             source: CameraSource.Camera,
             quality: 100,
         });
 
         // Create the `fileName` with current timestamp
-        const fileName = Date.now() + '.jpeg';
+        const fileName: string = Date.now() + '.jpeg';
         // Create `savedImageFile` matching `UserPhoto` interface
-        const savedImageFile: UserPhoto[]= [
-            {
-                filepath: fileName,
-                webviewpath: capturedPhoto.webPath
-            },
-            ...photos
-        ]
+        const savedImageFile: UserPhoto = await savePicture(capturedPhoto, fileName);
 
         // Update the `photos` array with the new photo
-        setPhotos(savedImageFile);
+        const newPhotos: UserPhoto[] = [savedImageFile, ...photos];
+        setPhotos(newPhotos);
+    };
+
+    const savePicture = async (photo: Photo, fileName: string): Promise<UserPhoto> => {
+        // Fetch the photo, read as a blob, then convert to base64 format
+        const response = await fetch(photo.webPath!);
+        const blob = await response.blob();
+        const base64Data = (await convertBlobToBase64(blob)) as string;
+
+        const savedFile = await Filesystem.writeFile({
+            path: fileName,
+            data: base64Data,
+            directory: Directory.Data,
+        });
+        
+        return {
+            filepath: fileName,
+            webviewpath: photo.webPath,
+        };
+    };
+
+    const convertBlobToBase64 = (blob: Blob) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = reject;
+            reader.onload = () => {
+                resolve(reader.result);
+            };
+            reader.readAsDataURL(blob);
+        });
     };
 
     return {
