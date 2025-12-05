@@ -1,10 +1,14 @@
-import { IonContent, IonFab, IonFabButton, IonHeader, IonIcon, 
-  IonPage, IonTitle, IonToolbar } from '@ionic/react';
+import { IonCol, IonContent, IonFab, IonFabButton, IonGrid, IonHeader, IonIcon, 
+  IonImg, 
+  IonPage, IonRow, IonTitle, IonToolbar } from '@ionic/react';
 import ExploreContainer from '../components/ExploreContainer';
 import './Tab2.css';
 import { camera } from 'ionicons/icons';
+import { usePhotoGallery } from '../hooks/usePhotoGallery';
 
 const Tab2: React.FC = () => {
+  const { addNewToGallery, photos } = usePhotoGallery();
+
   return (
     <IonPage>
       <IonHeader>
@@ -18,8 +22,17 @@ const Tab2: React.FC = () => {
             <IonTitle size="large">Photo Gallery</IonTitle>
           </IonToolbar>
         </IonHeader>
+        <IonGrid>
+          <IonRow>
+            {photos.map((photo) => (
+                <IonCol size="6" key={photo.filepath}>
+                  <IonImg src={photo.webviewpath} />
+                </IonCol>
+              ))}
+          </IonRow>
+        </IonGrid>
         <IonFab vertical="bottom" horizontal="center" slot="fixed">
-          <IonFabButton>
+          <IonFabButton onClick={() => addNewToGallery()}>
             <IonIcon icon={camera}></IonIcon>
           </IonFabButton>
         </IonFab>
