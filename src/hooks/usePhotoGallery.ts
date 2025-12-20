@@ -1,10 +1,38 @@
 import { Camera, CameraResultType, CameraSource, Photo } from '@capacitor/camera';
 import { Directory, Filesystem } from '@capacitor/filesystem';
-import { useState } from 'react';
+import { Preferences } from '@capacitor/preferences';
+import { useEffect, useState } from 'react';
 
 export function usePhotoGallery() {
     // add state variables
     const [photos, setPhotos] = useState<UserPhoto[]>([]);
+    // add key for photo storage
+    const PHOTO_STORAGE = 'photos';
+
+    // add useEffect hook, similiar to Lifecycle hook in angular (e.g. ngOnInit, etc...)
+    useEffect(() => {
+        const loadSaved = async () => {
+            const { value: photoList } = await Preferences.get({ key: PHOTO_STORAGE });
+            const photosInPreferences = photoList ? JSON.parse(photoList) : [];
+
+            // Display the photo by reading into base64 format (on the web)
+            for (const photo of photosInPreferences) {
+                const readFile = await Filesystem.readFile({
+                    path: photo.filepath,
+                    directory: Directory.Data
+                });
+
+                photo.webiewPath = `data:image/jpeg;base64,${readFile.data}`;
+            }
+
+            // set photo from Preferences
+            setPhotos(photosInPreferences);
+        };
+
+        loadSaved();
+        
+    }, []); //The second parameter, the empty dependency array ([]), is what tells React to only run the function once.
+
     const addNewToGallery = async () => {
         // Take a photo
         const capturedPhoto = await Camera.getPhoto({
@@ -31,6 +59,12 @@ export function usePhotoGallery() {
         // update state with new photo
         const newPhotos: UserPhoto[] = [savedImageFile, ...photos];
         setPhotos(newPhotos);
+
+        // save all photos for later viewing
+        Preferences.set({ 
+            key: PHOTO_STORAGE, 
+            value: JSON.stringify(newPhotos)
+        });
     };
 
     const savePicture = async (photo: Photo, fileName: string): Promise<UserPhoto> => {
