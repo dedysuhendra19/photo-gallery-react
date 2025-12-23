@@ -3,6 +3,10 @@ import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
 import { useEffect, useState } from 'react';
 
+import { isPlatform } from '@ionic/react';
+// to help with file paths on mobile devices
+import { Capacitor } from '@capacitor/core';
+
 export function usePhotoGallery() {
     // add state variables
     const [photos, setPhotos] = useState<UserPhoto[]>([]);
@@ -16,21 +20,23 @@ export function usePhotoGallery() {
             const photosInPreferences = photoList ? JSON.parse(photoList) : [];
 
             // Display the photo by reading into base64 format (on the web)
-            for (const photo of photosInPreferences) {
-                const readFile = await Filesystem.readFile({
-                    path: photo.filepath,
-                    directory: Directory.Data
-                });
+            if(!isPlatform('hybrid')) {
+                for (const photo of photosInPreferences) {
+                    const readFile = await Filesystem.readFile({
+                        path: photo.filepath,
+                        directory: Directory.Data
+                    });
 
-                photo.webiewPath = `data:image/jpeg;base64,${readFile.data}`;
+                    photo.webiewPath = `data:image/jpeg;base64,${readFile.data}`;
+                }
             }
 
-            // set photo from Preferences
+            // set photo from Preferences/local storage
             setPhotos(photosInPreferences);
         };
 
         loadSaved();
-        
+
     }, []); //The second parameter, the empty dependency array ([]), is what tells React to only run the function once.
 
     const addNewToGallery = async () => {
@@ -68,10 +74,20 @@ export function usePhotoGallery() {
     };
 
     const savePicture = async (photo: Photo, fileName: string): Promise<UserPhoto> => {
-        // Fetch the photo, read as a blob, then convert to base64 format
-        const response = await fetch(photo.webPath!);
-        const blob = await response.blob();
-        const base64Data = (await convertBlobToBase64(blob)) as string;
+        let base64Data: string | Blob;
+
+        if (isPlatform('hybrid')) {
+            // Read the file into base64 format
+            const readFile = await Filesystem.readFile({
+                path: photo.path!
+            });
+            base64Data = readFile.data;
+        } else {
+            // Fetch the photo, read as a blob, then convert to base64 format
+            const response = await fetch(photo.webPath!);
+            const blob = await response.blob();
+            base64Data = (await convertBlobToBase64(blob)) as string;
+        }
 
         const savedFile = await Filesystem.writeFile({
             path: fileName,
@@ -79,11 +95,19 @@ export function usePhotoGallery() {
             directory: Directory.Data
         })
 
+        if (isPlatform('hybrid')) {
+            // Display the new image by rewriting the 'file://' path to HTTP
+            return {
+                filepath: savedFile.uri,
+                webviewPath: Capacitor.convertFileSrc(savedFile.uri)
+            }
+        }
+
         // Use webPath to display the new image instead of base64 since it's
         // already loaded into memory
         return {
             filepath: fileName,
-            webiewPath: photo.webPath
+            webviewPath: photo.webPath
         };
     };
 
@@ -106,5 +130,5 @@ export function usePhotoGallery() {
 
 export interface UserPhoto {
     filepath: string;
-    webiewPath?: string;
+    webviewPath?: string;
 }
