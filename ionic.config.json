@@ -1,5 +1,5 @@
 {
-  "name": "photo-gallery-react",
+  "name": "Photo Gallery",
   "integrations": {
     "capacitor": {}
   },

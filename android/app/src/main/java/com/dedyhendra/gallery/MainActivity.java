@@ -1,4 +1,4 @@
-package io.ionic.starter;
+package com.dedyhendra.gallery;
 
 import com.getcapacitor.BridgeActivity;
 
