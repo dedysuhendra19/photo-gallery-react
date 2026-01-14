@@ -27,7 +27,7 @@ export function usePhotoGallery() {
                         directory: Directory.Data
                     });
 
-                    photo.webiewPath = `data:image/jpeg;base64,${readFile.data}`;
+                    photo.webviewPath = `data:image/jpeg;base64,${readFile.data}`;
                 }
             }
 
